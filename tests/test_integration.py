@@ -30,8 +30,10 @@ from homeassistant.const import (
     STATE_ON,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.event import async_track_state_change_event
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.terma_veo.api import TermaVeoClient
@@ -280,3 +282,33 @@ async def test_set_temperature_for_validates(
             {ATTR_ENTITY_ID: CLIMATE, **data},
             blocking=True,
         )
+
+
+async def test_target_never_unknown_while_switching_to_manual(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    await setup_entry(hass, device)
+    targets = []
+
+    @callback
+    def record(event: Event) -> None:
+        targets.append(event.data["new_state"].attributes.get(ATTR_TEMPERATURE))
+
+    async_track_state_change_event(hass, CLIMATE, record)
+    await call_climate(hass, SERVICE_SET_TEMPERATURE, temperature=22.5)
+    await hass.async_block_till_done()
+    assert targets
+    assert all(t == 22.5 for t in targets)
+
+
+async def test_failed_command_keeps_previous_target(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_PRESET_MODE, preset_mode="manual")
+    before = hass.states.get(CLIMATE).attributes[ATTR_TEMPERATURE]
+    await device.stop()
+    with pytest.raises(HomeAssistantError):
+        await call_climate(hass, SERVICE_SET_TEMPERATURE, temperature=25)
+    assert hass.states.get(CLIMATE).attributes[ATTR_TEMPERATURE] == before
+    await device.start()

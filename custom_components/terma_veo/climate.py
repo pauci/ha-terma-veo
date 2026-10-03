@@ -133,14 +133,9 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
 
         The countdown runs on the device, so it ends even if Home Assistant is down.
         """
-        seconds = int(duration.total_seconds())
-        await self.coordinator.async_command(
-            lambda: self.coordinator.client.set_temperature(
-                temperature, ManualMode.TIMER, seconds
-            )
+        await self._async_set_manual(
+            temperature, ManualMode.TIMER, int(duration.total_seconds())
         )
-        self._manual_target = temperature
-        self.async_write_ha_state()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         if preset_mode == PRESET_SCHEDULE:
@@ -158,9 +153,20 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
             temperature = self.coordinator.data.temperature or 20.0
         await self._async_set_manual(temperature, mode)
 
-    async def _async_set_manual(self, temperature: float, mode: ManualMode) -> None:
-        await self.coordinator.async_command(
-            lambda: self.coordinator.client.set_temperature(temperature, mode)
-        )
+    async def _async_set_manual(
+        self, temperature: float, mode: ManualMode, duration: int | None = None
+    ) -> None:
+        # Set the target first: the command publishes the device's new state
+        # right away, and that state must already show the new target.
+        previous = self._manual_target
         self._manual_target = temperature
-        self.async_write_ha_state()
+        try:
+            await self.coordinator.async_command(
+                lambda: self.coordinator.client.set_temperature(
+                    temperature, mode, duration
+                )
+            )
+        except Exception:
+            self._manual_target = previous
+            self.async_write_ha_state()
+            raise
