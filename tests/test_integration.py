@@ -312,3 +312,103 @@ async def test_failed_command_keeps_previous_target(
         await call_climate(hass, SERVICE_SET_TEMPERATURE, temperature=25)
     assert hass.states.get(CLIMATE).attributes[ATTR_TEMPERATURE] == before
     await device.start()
+
+
+async def test_manual_change_outside_ha_clears_target(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    entry = await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_PRESET_MODE, preset_mode="manual")
+    await call_climate(hass, SERVICE_SET_TEMPERATURE, temperature=21)
+    await call_climate(hass, SERVICE_SET_PRESET_MODE, preset_mode="schedule")
+
+    # Someone presses + on the radiator: it leaves the schedule, target unknown.
+    device.telemetry["manualMode"] = 2
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    state = hass.states.get(CLIMATE)
+    assert state.attributes[ATTR_PRESET_MODE] == "override"
+    assert state.attributes[ATTR_TEMPERATURE] is None
+
+    # Setting it from HA again makes it known.
+    await call_climate(hass, SERVICE_SET_TEMPERATURE, temperature=23)
+    assert hass.states.get(CLIMATE).attributes[ATTR_TEMPERATURE] == 23
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(CLIMATE).attributes[ATTR_TEMPERATURE] == 23
+
+
+async def _turn(hass: HomeAssistant, entity_id: str, on: bool) -> None:
+    await hass.services.async_call(
+        "switch",
+        SERVICE_TURN_ON if on else "turn_off",
+        {ATTR_ENTITY_ID: entity_id},
+        blocking=True,
+    )
+
+
+DRYER = "switch.terma_veo_dryer"
+
+
+async def test_dryer_switched_off_restores_heater_off(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_HVAC_MODE, hvac_mode=HVACMode.OFF)
+    await _turn(hass, DRYER, True)
+    assert hass.states.get(CLIMATE).state == HVACMode.HEAT  # device turned it on
+
+    await _turn(hass, DRYER, False)
+    assert device.requests[-1]["enable"] == 0
+    assert hass.states.get(CLIMATE).state == HVACMode.OFF
+
+
+async def test_dryer_timer_expiry_restores_heater_off(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    entry = await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_HVAC_MODE, hvac_mode=HVACMode.OFF)
+    await _turn(hass, DRYER, True)
+
+    device.telemetry["isDryerOn"] = 0  # timer expired on the device
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert device.requests[-1]["enable"] == 0
+    assert hass.states.get(CLIMATE).state == HVACMode.OFF
+
+
+async def test_dryer_started_on_device_restores_heater_off(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    entry = await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_HVAC_MODE, hvac_mode=HVACMode.OFF)
+
+    device.telemetry |= {"isDryerOn": 1, "isEnabled": 1}  # long-press + on device
+    await entry.runtime_data.async_refresh()
+    device.telemetry["isDryerOn"] = 0
+    await entry.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+    assert device.requests[-1]["enable"] == 0
+    assert hass.states.get(CLIMATE).state == HVACMode.OFF
+
+
+async def test_dryer_leaves_heater_on_if_it_was_on(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    await setup_entry(hass, device)
+    await _turn(hass, DRYER, True)
+    await _turn(hass, DRYER, False)
+    assert "enable" not in device.requests[-1]
+    assert hass.states.get(CLIMATE).state == HVACMode.HEAT
+
+
+async def test_heater_turned_on_while_drying_stays_on(
+    hass: HomeAssistant, device: FakeDevice
+) -> None:
+    await setup_entry(hass, device)
+    await call_climate(hass, SERVICE_SET_HVAC_MODE, hvac_mode=HVACMode.OFF)
+    await _turn(hass, DRYER, True)
+    await call_climate(hass, SERVICE_SET_HVAC_MODE, hvac_mode=HVACMode.HEAT)
+    await _turn(hass, DRYER, False)
+    assert "enable" not in device.requests[-1]
+    assert hass.states.get(CLIMATE).state == HVACMode.HEAT

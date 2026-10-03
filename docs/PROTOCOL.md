@@ -63,7 +63,7 @@ Used for every setting change on heaters. Send one group of fields per request.
 |---|---|
 | `setTemperature`, `manualMode`, `manualTimer` | Set target temperature. `manualMode`: `0` manual (permanent), `1` manual for `manualTimer` seconds, after which the device returns to its schedule by itself (`manualMode` 3; verified), `2` manual until the next schedule change. The remaining time is not reported |
 | `enable` | `1` on, `0` standby (off) |
-| `dryer`, `dryerTimer` | Dryer boost on/off for `dryerTimer` seconds (app default 3600) |
+| `dryer`, `dryerTimer` | Dryer ("intensive heating") on/off for `dryerTimer` seconds (app default 3600). Starting it switches the heater on (`isEnabled` 1). When it ends, by `dryer: 0` or timer expiry, the heater **stays on** and returns to its previous mode and target. `enable: 0` also stops the dryer |
 | `parentalControl` | Child lock `1`/`0` |
 | `zoneWeight` | Heating level as a fraction, `0.5`–`1.0` in steps of `0.1` (the app shows 50–100 %). Reported back as `heatingCoefficient`, slightly rounded down (`0.9` reads back as `0.899`) |
 | `powerCapabilities` | Heating element power in watts ("Output power" in the app), probably used to calculate `powerUsage`. Accepted but **not reported** in telemetry |
@@ -99,7 +99,7 @@ They haven't been tested.
 | `batteryLevel`, `humidity` | `50`, `0` | Not meaningful on the VEO |
 | `secureHttp`, `defaultSecureHttp` | `1` | Settings for the device's cloud connection |
 
-The current manual target temperature is **not** reported.
+The current manual target temperature is **not** reported, and neither are changes made with the buttons on the controller. The Terma app doesn't see them either. Telemetry values such as `temperature` and `isHeating` can lag by several minutes.
 
 ## Schedule
 

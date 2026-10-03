@@ -71,6 +71,13 @@ class FakeDevice:
         ):
             if field in req:
                 t[key] = req[field]
+        # Observed on the real device: starting the dryer switches the heater
+        # on, switching the heater off stops the dryer, and stopping the dryer
+        # leaves the heater on.
+        if req.get("dryer") == 1:
+            t["isEnabled"] = 1
+        if req.get("enable") == 0:
+            t["isDryerOn"] = 0
         if "zoneWeight" in req:
             # The real device reports e.g. 0.899 after 0.9 was set.
             t["heatingCoefficient"] = round(req["zoneWeight"] - 0.001, 3)

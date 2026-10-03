@@ -13,7 +13,7 @@ from homeassistant.components.climate import (
     HVACMode,
 )
 from homeassistant.const import UnitOfTemperature
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -66,6 +66,10 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
         super().__init__(coordinator, "climate")
         # The device does not report its manual target, so remember what we sent.
         self._manual_target: float | None = None
+        # Mode seen at the last update, to notice changes HA did not make
+        # (buttons on the device, the Terma app).
+        self._last_mode: int | None = coordinator.data.manual_mode
+        self._commanding = False
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -76,6 +80,20 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
                 and last.attributes.get("preset_mode") != PRESET_SCHEDULE
             ):
                 self._manual_target = float(value)
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        mode = self.coordinator.data.manual_mode
+        if (
+            not self._commanding
+            and mode != self._last_mode
+            and mode != ManualMode.SCHEDULE
+        ):
+            # Switched to manual outside HA: the device does not report the
+            # temperature that was set, so the remembered one would be wrong.
+            self._manual_target = None
+        self._last_mode = mode
+        super()._handle_coordinator_update()
 
     @property
     def current_temperature(self) -> float | None:
@@ -105,6 +123,8 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         enabled = hvac_mode == HVACMode.HEAT
+        if enabled:
+            self.coordinator.keep_heater_on_after_dryer()
         await self.coordinator.async_command(
             lambda: self.coordinator.client.set_enabled(enabled)
         )
@@ -160,6 +180,7 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
         # right away, and that state must already show the new target.
         previous = self._manual_target
         self._manual_target = temperature
+        self._commanding = True
         try:
             await self.coordinator.async_command(
                 lambda: self.coordinator.client.set_temperature(
@@ -170,3 +191,5 @@ class TermaVeoClimate(TermaVeoEntity, ClimateEntity, RestoreEntity):
             self._manual_target = previous
             self.async_write_ha_state()
             raise
+        finally:
+            self._commanding = False

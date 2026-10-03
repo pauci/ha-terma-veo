@@ -16,7 +16,7 @@ Terma's cloud, so changes take effect immediately.
 | Energy sensor | Energy used in kWh, usable in the Energy dashboard |
 | Heating | On while the heating element is running |
 | Problem | On if the controller reports an error |
-| Dryer | Towel-dryer boost ("Intensive heating" in the app). It switches itself off after *Dryer duration* |
+| Dryer | Towel-dryer boost ("Intensive heating" in the app). It switches itself off after *Dryer duration*. The radiator switches the heater on for drying; if the heater was off before, the integration switches it back off when drying ends (needs Home Assistant running at that moment) |
 | Dryer duration | How long the dryer runs, 10–240 minutes (default 60) |
 | Child lock | Locks the buttons on the controller |
 | Heating level | Limits heating output, 50–100 % |
@@ -31,6 +31,11 @@ How the target temperature works:
   until the next schedule change, then the schedule takes over again.
 - **Manual**: the temperature stays until you change it or switch back to
   *Schedule*.
+- The radiator doesn't report its target temperature. Home Assistant shows the last
+  temperature it set itself, or *unknown* when the radiator switched to manual some
+  other way (the Terma app, the dryer ending). Changes made with the buttons on the
+  radiator can't be detected at all. Turn on *Child lock* if Home Assistant should
+  stay in control.
 
 ### Action: `terma_veo.set_temperature_for`
 
