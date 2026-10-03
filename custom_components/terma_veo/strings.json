@@ -1,0 +1,87 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Enter the IP address of the Terma VEO controller and its serial number (the Wi-Fi host name it shows in your router, e.g. ABCD1234EFGH567).",
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]",
+          "serial": "Serial number"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "host": "[%key:common::config_flow::data::host%]"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_device": "The device answered but rejected the serial number.",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "heating": {
+        "name": "Heating"
+      }
+    },
+    "climate": {
+      "radiator": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "schedule": "Schedule",
+              "manual": "Manual",
+              "override": "Until next schedule change"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "heating_level": {
+        "name": "Heating level"
+      },
+      "heating_power": {
+        "name": "Heating power"
+      },
+      "dryer_duration": {
+        "name": "Dryer duration"
+      }
+    },
+    "sensor": {
+      "heater_temperature": {
+        "name": "Heater temperature"
+      }
+    },
+    "switch": {
+      "dryer": {
+        "name": "Dryer"
+      },
+      "child_lock": {
+        "name": "Child lock"
+      }
+    }
+  },
+  "services": {
+    "set_temperature_for": {
+      "name": "Set temperature for a time",
+      "description": "Holds a temperature for a set time, then returns to the radiator's own schedule. The countdown runs on the radiator, so it ends even if Home Assistant is offline.",
+      "fields": {
+        "temperature": {
+          "name": "Temperature",
+          "description": "Target temperature to hold."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "How long to hold the temperature (1 minute to 24 hours)."
+        }
+      }
+    }
+  }
+}

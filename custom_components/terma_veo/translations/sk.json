@@ -1,0 +1,87 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "description": "Zadajte IP adresu ovládača Terma VEO a jeho sériové číslo (názov hostiteľa Wi-Fi, ktorý vidno v routeri, napr. ABCD1234EFGH567).",
+        "data": {
+          "host": "Hostiteľ",
+          "serial": "Sériové číslo"
+        }
+      },
+      "reconfigure": {
+        "data": {
+          "host": "Hostiteľ"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nepodarilo sa pripojiť",
+      "invalid_device": "Zariadenie odpovedalo, ale odmietlo sériové číslo.",
+      "unknown": "Neočakávaná chyba"
+    },
+    "abort": {
+      "already_configured": "Zariadenie je už nakonfigurované",
+      "reconfigure_successful": "Opätovná konfigurácia bola úspešná"
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "heating": {
+        "name": "Kúrenie"
+      }
+    },
+    "climate": {
+      "radiator": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "schedule": "Rozvrh",
+              "manual": "Manuálne",
+              "override": "Do ďalšej zmeny rozvrhu"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "heating_level": {
+        "name": "Úroveň vykurovania"
+      },
+      "heating_power": {
+        "name": "Výkon vykurovania"
+      },
+      "dryer_duration": {
+        "name": "Dĺžka sušenia"
+      }
+    },
+    "sensor": {
+      "heater_temperature": {
+        "name": "Teplota vykurovacieho telesa"
+      }
+    },
+    "switch": {
+      "dryer": {
+        "name": "Sušenie"
+      },
+      "child_lock": {
+        "name": "Detská zámka"
+      }
+    }
+  },
+  "services": {
+    "set_temperature_for": {
+      "name": "Nastaviť teplotu na čas",
+      "description": "Udržiava teplotu po nastavený čas a potom sa vráti k vlastnému rozvrhu radiátora. Odpočet beží v radiátore, takže skončí aj keď je Home Assistant offline.",
+      "fields": {
+        "temperature": {
+          "name": "Teplota",
+          "description": "Cieľová teplota."
+        },
+        "duration": {
+          "name": "Trvanie",
+          "description": "Ako dlho udržiavať teplotu (1 minúta až 24 hodín)."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "domain": "terma_veo",
+  "name": "Terma VEO",
+  "codeowners": ["@pauci"],
+  "config_flow": true,
+  "documentation": "https://github.com/pauci/ha-terma-veo",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/pauci/ha-terma-veo/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
