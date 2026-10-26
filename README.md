@@ -67,9 +67,10 @@ data:
 
 ### HACS
 
-1. HACS → ⋮ → *Custom repositories* → add `https://github.com/pauci/ha-terma-veo`
-   with the type *Integration*.
-2. Install **Terma VEO** and restart Home Assistant.
+[![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=pauci&repository=ha-terma-veo&category=integration)
+
+1. Search HACS for **Terma VEO** (or use the button above).
+2. Install it and restart Home Assistant.
 
 ### Manual
 
